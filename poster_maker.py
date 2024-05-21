@@ -13,11 +13,12 @@ client = OpenAI(api_key=openai_api_key)
 
 if 'content' not in  st.session_state: 
     st.session_state['content'] = 'Write your content here or generate by AI'
-
+if 'aicontent' not in  st.session_state: 
+    st.session_state.aicontent = []
 
 inputs = []
 
-def generate_content(text_length=100, prompt=""):
+def generate_content(text_length=100, prompt="" , id=""):
     response  = client.chat.completions.create(
         model="gpt-3.5-turbo",
           messages=[
@@ -27,7 +28,7 @@ def generate_content(text_length=100, prompt=""):
     )
     print(response)
     out = str(response.choices[0].message.content).strip('"')
-    st.session_state['content'] = out
+    st.session_state.aicontent.append({"id":id,"content":out})
     return out
 
 
@@ -83,18 +84,30 @@ with col1:
 
 
     with promt_col:
+        selected_input = st.selectbox(label='Select Input', options=[i['id'] for i in inputs], index=0)
+
         prompt = st.text_input('Enter Prompt', placeholder='write prompt here')
 
     with length_col:
         text_length = st.number_input(label='Text Length' ,value=100, step=1 , min_value=0, max_value=500)
+    
 # with gen_gpt_col:
     gen_gpt_btn = st.button('🎉 Generate with AI')
 
     if gen_gpt_btn:
-        generate_content(prompt=prompt , text_length=text_length)
+        generate_content(prompt=prompt , text_length=text_length , id=selected_input)
         # st.write(content)
+    print(selected_input )
+
+    for k in inputs:
+        if k['id'] == selected_input:
+            for x in st.session_state.aicontent:
+                if x['id'] == selected_input:
+                    k['value'] = x['content']
+                    break
+
     
-    content = st.text_area('Enter Content', value=st.session_state['content'])
+    # content = st.text_area('Enter Content', value=st.session_state['content'])
 
     footer = st.text_input('Enter Footer', value='Footer')
     bg_color = st.color_picker('Enter Background Color')
@@ -107,7 +120,7 @@ with col1:
             outf.write(image_upload.read())
 
 
-content = content.upper()
+# content = content.upper()
 
 
 def make_header(resolution, html_path):
@@ -118,6 +131,7 @@ def make_header(resolution, html_path):
 
     st.write(inputs)
     st.write(all_h1)
+    st.write(st.session_state.aicontent)
 
     for j in inputs:
         soup.find(id=j['id']).string = j['value']
