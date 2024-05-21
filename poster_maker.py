@@ -2,9 +2,7 @@ import os
 import bs4 
 from html2image import Html2Image
 import streamlit as st
-# from openai import OpenAI
-
-
+from openai import OpenAI
 
 
 
@@ -13,9 +11,11 @@ openai_api_key = os.getenv('OPENAI_API_KEY')
 client = OpenAI(api_key=openai_api_key)
 
 
-
 if 'content' not in  st.session_state: 
     st.session_state['content'] = 'Write your content here or generate by AI'
+
+
+inputs = []
 
 def generate_content(text_length=100, prompt=""):
     response  = client.chat.completions.create(
@@ -33,7 +33,7 @@ def generate_content(text_length=100, prompt=""):
 
 
 os.chdir(os.path.dirname(__file__))
-# set st backgound color
+
 
 st.set_page_config(layout="wide") 
 st.markdown("""
@@ -52,13 +52,35 @@ st.markdown("""
 st.title = 'Poster Creator'
 st.header('Auto Poster Creator')
 
+
+
+
+
+
+
 col1, mid_m, col2 = st.columns([3,0.5 ,2])
 
 with col1:
     content = None
-    comp_name = st.text_input('Enter Company Name', value='Company Name')
+
+    Template = st.selectbox('Select Template', ['./poster2.html', './poster.html'])
+    with open(Template) as inf:
+        txt = inf.read()
+        soup = bs4.BeautifulSoup(txt)
+  
+
+    all_h1 = [{"id": h1.get('id'), "string": h1.get_text()} for h1 in soup.find_all('h1')]
+
+    for i in all_h1:
+        if i['id'] is not None:
+            input = st.text_input(label=i['id'], value=i['string'], key=i['id'])
+            inputs.append( {"id":i['id'] , "value":input} )
+
+    
+    # comp_name = st.text_input('Enter Company Name', value='Company Name')
     
     promt_col , length_col = st.columns(2) 
+
 
     with promt_col:
         prompt = st.text_input('Enter Prompt', placeholder='write prompt here')
@@ -94,28 +116,34 @@ def make_header(resolution, html_path):
         txt = inf.read()
         soup = bs4.BeautifulSoup(txt)
 
+    st.write(inputs)
+    st.write(all_h1)
+
+    for j in inputs:
+        soup.find(id=j['id']).string = j['value']
+
+        print(soup.find(id=j['id']))
 
 
-    soup.find(id='comp_name').string = comp_name
-    soup.find(id='main-heading').string = content
-    soup.find(id='footer-content').string = footer
-    soup.find(id='bg-color').attrs['style'] = f'background-color: {bg_color}; height: {resolution[1]}; width: {resolution[0]};'
-    soup.find(id='main-content').attrs['style'] = f'height: {resolution[1]};'
+        
+
+    # soup.find(id='comp_name').string = comp_name
+    # soup.find(id='main-heading').string = content
+    # soup.find(id='footer-content').string = footer
+    soup.find('body').attrs['style'] = f'background-color: {bg_color}; height: {resolution[1]}; width: {resolution[0]};'
+    # soup.find(id='main-content').attrs['style'] = f'height: {resolution[1]};'
 
     
     if user_image_url is not None:
-        soup.find(id='comp_img').attrs['src'] =  os.path.join(os.getcwd(), user_image_url) #  user_image_url
+        soup.find(id='comp_img').attrs['src'] =  os.path.join(os.getcwd(), user_image_url) 
+
+
     title_html = soup.prettify()
     hti = Html2Image()
     hti.screenshot(html_str=title_html,save_as='tmp_imp.png', size=resolution)
 
 
-width = 1080
-height = 1350
-make_header(resolution=(width, height), html_path=r'D:\auto_poster\poster.html')
 
-with col2:
-    st.image('tmp_imp.png' )
    
 with col1:
         h1c, h2c = st.columns([1,1])
@@ -125,6 +153,9 @@ with col1:
             height = st.number_input('height', value=1350)
 
         st.download_button(label='Download', data=open('tmp_imp.png', 'rb').read(), file_name='poster.png', mime='image/png')
-        # st.success('Your Poster is Downloaded Successfully!')
+        
 
     
+make_header(resolution=(width, height), html_path=Template)
+with col2:
+    st.image('tmp_imp.png' )
