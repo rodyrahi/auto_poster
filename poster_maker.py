@@ -72,10 +72,20 @@ with col1:
 
     all_h1 = [{"id": h1.get('id'), "string": h1.get_text()} for h1 in soup.find_all('h1')]
 
+    
     for i in all_h1:
         if i['id'] is not None:
-            input = st.text_input(label=i['id'], value=i['string'], key=i['id'])
-            inputs.append( {"id":i['id'] , "value":input} )
+            print(i , "123")
+            
+            
+            for p in st.session_state.aicontent:
+                if p['id'] == i['id']:
+                    input = st.text_input(label=i['id'], value=p['content'], key=i['id'])
+                    
+            if i['id'] not in inputs:
+                inputs.append( {"id":i['id'] , "value":input} )
+                
+    
 
     
     # comp_name = st.text_input('Enter Company Name', value='Company Name')
